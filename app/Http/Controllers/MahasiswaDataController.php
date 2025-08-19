@@ -27,17 +27,25 @@ class MahasiswaDataController extends Controller
         }
     }
 
-    public function update(Request $request, $nim)
+    public function update($nim)
     {
-        $mhs = DB::table('mahasiswas')->where('nim', $nim)->first();
+        // update langsung status = 1 berdasarkan nim
+        $mahasiswa = Mahasiswa::where('nim', $nim)->first();
 
-        if (!$mhs) {
-            return response()->json(['message' => 'Mahasiswa tidak ditemukan'], 404);
+        if ($mahasiswa) {
+            $mahasiswa->update(['status' => 1]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Status berhasil diperbarui!',
+                'data' => $mahasiswa
+            ]);
         }
 
-        DB::table('mahasiswas')->where('nim', $nim)->update(['status' => 1]);
-
-        return response()->json($mhs);
+        return response()->json([
+            'success' => false,
+            'message' => 'Mahasiswa dengan NIM ' . $nim . ' tidak ditemukan.'
+        ], 404);
     }
 
 

@@ -144,6 +144,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
+        // Ensure the DOM is fully loaded before running scripts
         function domReady(fn) {
             if (document.readyState === 'complete' || document.readyState === 'interactive') {
                 setTimeout(fn, 1); // Use setTimeout to ensure the DOM is fully loaded
@@ -152,6 +153,47 @@
             }
         }
 
+
+        function updateAttendance(data,nim) {
+            // Get values from input fields
+            let token = $("meta[name='csrf-token']").attr("content");
+
+            //ajax
+            $.ajax({
+
+                url: `/mahasiswa/${nim}`,
+                type: "PUT",
+                cache: false,
+                data: {
+                    "_token": token
+                },
+                success: function(response) {
+
+                    //show success message
+                    Swal.fire({
+                        icon: 'success',
+                        title: "Terkonfirmasi!",
+                        text: data.nama + " telah ditandai hadir.",
+                        showConfirmButton: false,
+                        timer: 3000
+                    });
+
+                },
+                error: function(error) {
+                    console.error("Error updating attendance:", error);
+                    Swal.fire({
+                        icon: "error",
+                        title: "GAGAL!",
+                        text: "Terjadi kesalahan saat memperbarui kehadiran.",
+                        showConfirmButton: false,
+                        timer: 2000
+                    });
+                }
+
+            });
+        }
+
+        // Function to handle confirmation of mahasiswa presence
         function confirmationMahasiswa(nim) {
             fetch(`/mahasiswa/${nim}`)
                 .then(res => res.json())
@@ -192,27 +234,8 @@
                                 reverseButtons: true
                             }).then((result) => {
                                 if (result.isConfirmed) {
-                                    $.ajax({
-                                        url: `/mahasiswa/${nim}`,
-                                        type: 'PUT',
-                                        data: {
-                                            _token: '{{ csrf_token() }}'
-                                        },
-                                        success: function(data) {
-                                            Swal.fire({
-                                                title: "Terkonfirmasi!",
-                                                text: data.nama + " telah ditandai hadir.",
-                                                icon: "success"
-                                            });
-                                        },
-                                        error: function(err) {
-                                            Swal.fire({
-                                                title: "Gagal!",
-                                                text: "Terjadi kesalahan saat update.",
-                                                icon: "error"
-                                            });
-                                        }
-                                    });
+                                    console.log("Konfirmasi kehadiran untuk NIM:", nim);
+                                    updateAttendance(data, nim);
                                 } else if (result.dismiss === Swal.DismissReason.cancel) {
                                     Swal.fire({
                                         title: "Dibatalkan",
@@ -233,6 +256,7 @@
                 });
         }
 
+        // Handle QR code scanning when the DOM is ready
         domReady(function() {
             var nim;
             let result;
@@ -269,6 +293,7 @@
             htmlscanner.render(onScanSuccess, onScanError);
         })
 
+        //Handler for manual NIM input
         document.getElementById('NIMsearch').addEventListener('submit', function(event) {
             event.preventDefault();
             const nimInput = document.getElementById('nim').value.trim();
@@ -284,12 +309,8 @@
             }
         });
 
+
         //accessData
-        let attendedStudents = @json($mahasiswas);
-        console.log(attendedStudents.nim);
-
-
-
         const notAttendedStudents = [{
             nim: "222112006",
             nama: "Eka Putri Maharani",
