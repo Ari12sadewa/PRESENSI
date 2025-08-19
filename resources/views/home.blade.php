@@ -20,7 +20,7 @@
                             </small>
                         </div>
 
-                        <div id="scanResult" class="alert alert-info mt-3"></div>
+                        <div id="scanResult" class="alert alert-info mt-3 d-none"></div>
                     </div>
                 </div>
             </div>
@@ -33,14 +33,14 @@
                         <i class="fas fa-edit me-2"></i> Input Manual NIM
                     </div>
                     <div class="card-body">
-                        <form>
+                        <form id="NIMsearch">
                             <div class="mb-3">
                                 <label for="nim" class="form-label">NIM Mahasiswa Wisudawan</label>
                                 <input type="text" class="form-control form-control-lg" id="nim"
                                     placeholder="Masukkan NIM mahasiswa">
                             </div>
                             <button type="submit" class="btn btn-primary btn-lg w-100">
-                                <i class="fas fa-check me-2"></i> Konfirmasi Kehadiran
+                                <i class="fas fa-check me-2"></i> Konfirmasi
                             </button>
                         </form>
                     </div>
@@ -142,6 +142,7 @@
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         function domReady(fn) {
             if (document.readyState === 'complete' || document.readyState === 'interactive') {
@@ -151,33 +152,111 @@
             }
         }
 
+        function confirmationMahasiswa(nim) {
+            fetch(`/mahasiswa/${nim}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.message) {
+                        Swal.fire({
+                            icon: "error",
+                            title: "GAGAL!",
+                            text: data.message,
+                            showConfirmButton: false,
+                            timer: 2000
+                        });
+                    } else {
+                        if (data.status === 1) {
+                            Swal.fire({
+                                icon: "info",
+                                title: "Sudah Hadir!",
+                                text: data.nama + " sudah ditandai hadir.",
+                                showConfirmButton: false,
+                                timer: 2000
+                            });
+                        } else {
+                            const swalWithBootstrapButtons = Swal.mixin({
+                                customClass: {
+                                    confirmButton: "btn btn-success",
+                                    cancelButton: "btn btn-danger me-2"
+                                },
+                                buttonsStyling: false
+                            });
+
+                            swalWithBootstrapButtons.fire({
+                                title: "Konfirmasi Kehadiran?",
+                                text: data.nama + " akan ditandai hadir",
+                                icon: "question",
+                                showCancelButton: true,
+                                confirmButtonText: "Konfirmasi Hadir",
+                                cancelButtonText: "Batalkan",
+                                reverseButtons: true
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    $.ajax({
+                                        url: `/mahasiswa/${nim}`,
+                                        type: 'PUT',
+                                        data: {
+                                            _token: '{{ csrf_token() }}'
+                                        },
+                                        success: function(data) {
+                                            Swal.fire({
+                                                title: "Terkonfirmasi!",
+                                                text: data.nama + " telah ditandai hadir.",
+                                                icon: "success"
+                                            });
+                                        },
+                                        error: function(err) {
+                                            Swal.fire({
+                                                title: "Gagal!",
+                                                text: "Terjadi kesalahan saat update.",
+                                                icon: "error"
+                                            });
+                                        }
+                                    });
+                                } else if (result.dismiss === Swal.DismissReason.cancel) {
+                                    Swal.fire({
+                                        title: "Dibatalkan",
+                                        text: "Tidak ada perubahan pada kehadiran.",
+                                        icon: "error"
+                                    });
+                                }
+
+                                processing = false;
+                            });
+                        }
+
+                    }
+                })
+                .catch(err => {
+                    console.error("Fetch error:", err);
+                    processing = false;
+                });
+        }
+
         domReady(function() {
             var nim;
             let result;
+            let processing = false;
             var myqr = document.getElementById('scanResult');
             var lastResult, countResults = 0;
 
             function onScanSuccess(decodedText, decodedResult) {
                 if (decodedText !== lastResult) {
-                    ++countResults;
                     lastResult = decodedText;
-                    myqr.innerHTML =
-                        `<div class="alert alert-success">Hasil: ${decodedText} <br> Total hasil: ${countResults}</div>`;
-                    let nim = decodedText.split(";")[0];
-                    console.log(nim);
-
-                    fetch(`/mahasiswa/${nim}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.message) {
-                                console.log("Error:", data.message);
-                            } else {
-                                console.log("Data Mahasiswa:", data);
-                            }
-                        })
-                        .catch(err => console.error("Fetch error:", err));
-
+                    processing = false;
                 }
+
+                if (!processing) {
+                    processing = true;
+                    let nim = decodedText.split(";")[0];
+                    confirmationMahasiswa(nim);
+                    myqr.classList.remove('d-none');
+                    myqr.innerHTML = `<strong>Hasil Scan Terakhir:</strong> ${decodedText}`;
+                }
+            }
+
+            function onScanError(errMessege) {
+                processing = false;
             }
 
             var htmlscanner = new Html5QrcodeScanner(
@@ -186,8 +265,24 @@
                     qrbox: 250
                 }
             )
-            htmlscanner.render(onScanSuccess)
+
+            htmlscanner.render(onScanSuccess, onScanError);
         })
+
+        document.getElementById('NIMsearch').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const nimInput = document.getElementById('nim').value.trim();
+            if (nimInput) {
+                confirmationMahasiswa(nimInput);
+            } else {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Perhatian!',
+                    text: 'NIM tidak boleh kosong.',
+                    confirmButtonText: 'OK'
+                });
+            }
+        });
 
         //accessData
         let attendedStudents = @json($mahasiswas);

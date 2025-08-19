@@ -13,7 +13,6 @@ class MahasiswaDataController extends Controller
     public function index()
     {
         $mahasiswas = Mahasiswa::find(1);
-        dump($mahasiswas);
         return view('home', compact('mahasiswas'));
     }
 
@@ -27,4 +26,20 @@ class MahasiswaDataController extends Controller
             return response()->json(['message' => 'Mahasiswa tidak ditemukan'], 404);
         }
     }
+
+    public function update(Request $request, $nim)
+    {
+        $mhs = DB::table('mahasiswas')->where('nim', $nim)->first();
+
+        if (!$mhs) {
+            return response()->json(['message' => 'Mahasiswa tidak ditemukan'], 404);
+        }
+
+        DB::table('mahasiswas')->where('nim', $nim)->update(['status' => 1]);
+
+        return response()->json($mhs);
+    }
+
+
+
 }

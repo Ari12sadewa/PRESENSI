@@ -21,5 +21,6 @@ Route::get('actionlogout', [LoginController::class, 'actionlogout'])->name('acti
 Route::get('register', [RegisterController::class, 'register'])->name('register');
 Route::post('register/action', [RegisterController::class, 'actionregister'])->name('actionregister');
 
-Route::get('/mahasiswa', [MahasiswaDataController::class, 'index']);
-Route::get('/mahasiswa/{nim}', [MahasiswaDataController::class, 'show']);
+Route::get('/mahasiswa', [MahasiswaDataController::class, 'index'])-> name('index');
+Route::get('/mahasiswa/{nim}', [MahasiswaDataController::class, 'show'])-> name('show');
+Route::put('/mahasiswa/{nim}', [MahasiswaDataController::class, 'update'])-> name('update');
