@@ -5,15 +5,39 @@ namespace App\Http\Controllers;
 use App\Models\Mahasiswa;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use function PHPUnit\Framework\returnArgument;
 
 class MahasiswaDataController extends Controller
 {
     public function index()
-    {
-        $mahasiswas = Mahasiswa::find(1);
-        return view('home', compact('mahasiswas'));
+    {   
+        $allAttended = Mahasiswa::all()->map(function ($m) {
+            $m->updated_at_ = Carbon::parse($m->updated_at)
+                ->setTimezone('Asia/Jakarta')
+                ->format('H:i'); // hanya jam:menit
+            return $m;
+        });
+        
+        return response()->json([
+            'allAttended' => $allAttended,
+        ]);
+        // return view('home', ['allAttended' => $allAttended, 'attended' => $attended, 'notAttended' => $notAttended]);
+    }
+    public function status()
+    {   
+        $allAttended = Mahasiswa::all()->count();
+        $attended = Mahasiswa::where('status', 1)->get()->count();
+        $notAttended = Mahasiswa::where('status', 0)->get()->count();
+
+        return response()->json([
+            'allAttended' => $allAttended,
+            'attended' => $attended,
+            'notAttended' => $notAttended,
+        ]);
+        // return view('home', ['allAttended' => $allAttended, 'attended' => $attended, 'notAttended' => $notAttended]);
     }
 
     public function show($nim)

@@ -7,7 +7,7 @@
         <!-- Scanner & Input Section -->
         <div class="row mb-4">
             <!-- Camera Scanner -->
-            <div class="col-md-6">
+            <div class="col-md-6 mb-1">
                 <div class="card">
                     <div class="card-header">
                         <i class="fas fa-camera me-2"></i> Scanner Barcode / QR
@@ -27,7 +27,7 @@
 
 
             <!-- Manual Input -->
-            <div class="col-md-6">
+            <div class="col-md-6 mt-1">
                 <div class="card">
                     <div class="card-header">
                         <i class="fas fa-edit me-2"></i> Input Manual NIM
@@ -50,36 +50,36 @@
 
         <!-- Statistics Cards -->
         <div class="row mb-4">
-            <div class="col-md-4">
+            <div class="col-md-4 m-2">
                 <div class="card stats-card">
                     <div class="card-body d-flex align-items-center">
                         <div class="flex-grow-1">
                             <h6 class="text-muted mb-0">Total Undangan</h6>
-                            <h3 class="mb-0 text-primary">150</h3>
+                            <h3 class="mb-0 text-primary" id="allAttended"></h3>
                         </div>
                         <i class="fas fa-users fa-2x text-primary"></i>
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-4">
+            <div class="col-md-4 m-2">
                 <div class="card stats-card" style="border-left-color: #10b981;">
                     <div class="card-body d-flex align-items-center">
                         <div class="flex-grow-1">
                             <h6 class="text-muted mb-0">Telah Hadir</h6>
-                            <h3 class="mb-0" style="color: #10b981;">75</h3>
+                            <h3 class="mb-0" style="color: #10b981;" id="attended"></h3>
                         </div>
                         <i class="fas fa-check-circle fa-2x" style="color: #10b981;"></i>
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-4">
+            <div class="col-md-4 m-2">
                 <div class="card stats-card" style="border-left-color: #ef4444;">
                     <div class="card-body d-flex align-items-center">
                         <div class="flex-grow-1">
                             <h6 class="text-muted mb-0">Belum Hadir</h6>
-                            <h3 class="mb-0" style="color: #ef4444;">75</h3>
+                            <h3 class="mb-0" style="color: #ef4444;" id="notAttended"></h3>
                         </div>
                         <i class="fas fa-clock fa-2x" style="color: #ef4444;"></i>
                     </div>
@@ -88,7 +88,7 @@
         </div>
 
         <!-- Chart Section -->
-        <div id="chartSection" class="card">
+        <div id="chartSection" class="card mb-4">
             <div class="card-header">
                 <i class="fas fa-chart-pie me-2"></i> Grafik Kehadiran
             </div>
@@ -128,7 +128,7 @@
                                 <th>No</th>
                                 <th>NIM</th>
                                 <th>Nama</th>
-                                <th>Program Studi</th>
+                                <th>Kelas</th>
                                 <th>Status</th>
                                 <th>Waktu</th>
                             </tr>
@@ -153,8 +153,8 @@
             }
         }
 
-
-        function updateAttendance(data,nim) {
+        //Update attandance function
+        function updateAttendance(data, nim) {
             // Get values from input fields
             let token = $("meta[name='csrf-token']").attr("content");
 
@@ -168,8 +168,8 @@
                     "_token": token
                 },
                 success: function(response) {
-
                     //show success message
+                    fetchAttendanceData();
                     Swal.fire({
                         icon: 'success',
                         title: "Terkonfirmasi!",
@@ -310,6 +310,66 @@
         });
 
 
+        // Pie Chart Kehadiran Undangan
+        let attendanceChart;
+        domReady(function() {
+            const ctx = document.getElementById('attendanceChart').getContext('2d');
+            attendanceChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['Telah Hadir', 'Belum Hadir'],
+                    datasets: [{
+                        data: [0, 0],
+                        backgroundColor: ['#10b981', '#ef4444'],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                font: {
+                                    size: 14
+                                }
+                            }
+                        }
+                    },
+                    onHover: (event, activeElements) => {
+                        event.native.target.style.cursor = activeElements.length > 0 ? 'pointer' :
+                            'default';
+                    },
+                    onClick: (event, activeElements) => {
+                        if (activeElements.length > 0) {
+                            const index = activeElements[0].index;
+                            showTable(index === 0 ? 'attended' : 'notAttended');
+                        }
+                    }
+                }
+            });
+        });
+
+        function fetchAttendanceData() {
+            document.getElementById
+            fetch('/mahasiswa/status')
+                .then(res => res.json())
+                .then(data => {
+                    console.log(data.attended);
+                    $('#allAttended').text(data.allAttended);
+                    $('#attended').text(data.attended);
+                    $('#notAttended').text(data.notAttended);
+                    attendanceChart.data.datasets[0].data = [data.attended, data.notAttended];
+                    attendanceChart.update();
+                })
+                .catch(err => console.error('Error fetching chart data:', err));
+        }
+
+        fetchAttendanceData();
+
         //accessData
         const notAttendedStudents = [{
             nim: "222112006",
@@ -317,60 +377,34 @@
             kelas: "D-IV Statistika",
             status: "-"
         }];
+        console.log(typeof(notAttendedStudents));
 
         // Initialize Chart
-        const ctx = document.getElementById('attendanceChart').getContext('2d');
-        const attendanceChart = new Chart(ctx, {
-            type: 'pie',
-            data: {
-                labels: ['Telah Hadir', 'Belum Hadir'],
-                datasets: [{
-                    data: [75, 75],
-                    backgroundColor: ['#10b981', '#ef4444'],
-                    borderWidth: 2,
-                    borderColor: '#fff'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            padding: 20,
-                            font: {
-                                size: 14
-                            }
-                        }
-                    }
-                },
-                onHover: (event, activeElements) => {
-                    event.native.target.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
-                },
-                onClick: (event, activeElements) => {
-                    if (activeElements.length > 0) {
-                        const index = activeElements[0].index;
-                        showTable(index === 0 ? 'attended' : 'notAttended');
-                    }
-                }
-            }
-        });
 
         function showTable(type) {
 
             document.getElementById('chartSection').classList.add('d-none');
             document.getElementById('tableSection').classList.remove('d-none');
-
+            let AttendedStudents;
+            let notAttendedStudents;
             const tableTitle = document.getElementById('tableTitle');
-            if (type === 'attended') {
-                tableTitle.innerHTML =
-                    '<i class="fas fa-check-circle me-2" style="color: #10b981;"></i> Daftar Yang Telah Hadir';
-                populateTable(attendedStudents, 'Hadir', '#10b981');
-            } else {
-                tableTitle.innerHTML = '<i class="fas fa-clock me-2" style="color: #ef4444;"></i> Daftar Yang Belum Hadir';
-                populateTable(notAttendedStudents, 'Belum Hadir', '#ef4444');
-            }
+            fetch('/mahasiswa')
+                .then(res => res.json())
+                .then(data => {
+                    AttendedStudents = data.allAttended.filter(m=>m.status===1);
+                    notAttendedStudents = data.allAttended.filter(m=>m.status===0);
+                    console.log(AttendedStudents);
+                    if (type === 'attended') {
+                        tableTitle.innerHTML =
+                            '<i class="fas fa-check-circle me-2" style="color: #10b981;"></i> Daftar Yang Telah Hadir';
+                        populateTable(AttendedStudents, 'Hadir', '#10b981');
+                    } else {
+                        tableTitle.innerHTML =
+                            '<i class="fas fa-clock me-2" style="color: #ef4444;"></i> Daftar Yang Belum Hadir';
+                        populateTable(notAttendedStudents, 'Belum Hadir', '#ef4444');
+                    }
+                })
+                .catch(err => console.error('Error fetching chart data:', err));
         }
 
         function populateTable(data, status, color) {
@@ -384,7 +418,7 @@
                         <td>${student.nama}</td>
                         <td>${student.kelas}</td>
                         <td><span class="badge" style="background-color:${color};">${status}</span></td>
-                        <td>${student.status}</td>
+                        <td>${student.updated_at_}</td>
                     </tr>`;
             });
         }
